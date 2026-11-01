@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YardSync | Gestão de Pátio</title>
+    <title>YardSync | Gestão Inteligente e TI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
@@ -36,10 +36,10 @@
         .login-card h2 { color: var(--primary); text-align: center; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
-        .form-group input { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; }
+        .form-group input, .form-group select { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; }
         .error-msg { color: #ef4444; font-size: 0.8rem; text-align: center; display: none; }
 
-        /* App Layout */
+        /* Layout */
         #appContainer { display: none; width: 100%; }
         aside {
             width: var(--sidebar-width); background-color: var(--primary); color: white;
@@ -60,25 +60,23 @@
         .tab-content { display: none; flex-direction: column; gap: 24px; }
         .tab-content.active { display: flex; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
         .stat-card { background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); }
         .stat-card h3 { font-size: 1.75rem; font-weight: 700; color: var(--primary); margin-top: 6px; }
 
         .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; }
-        .btn { background-color: var(--accent); color: white; border: none; padding: 12px 20px; font-weight: 600; border-radius: 8px; cursor: pointer; }
+        .btn { background-color: var(--accent); color: white; border: none; padding: 10px 16px; font-weight: 600; border-radius: 8px; cursor: pointer; }
         .btn:hover { background-color: var(--accent-hover); }
-        .btn-danger { background-color: #ef4444; margin-top: 10px; display: none; }
+        .btn-danger { background-color: #ef4444; }
         .btn-danger:hover { background-color: #dc2626; }
 
-        #reader { max-width: 400px; margin: 20px auto; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); display: none; }
-
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); }
-        th { background-color: #f8fafc; color: var(--primary); }
+        .table-responsive { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+        th, td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        th { background-color: #f8fafc; color: var(--primary); font-weight: 600; }
         
-        .badge { padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .status-patio { background: #dcfce7; color: #166534; }
-        .status-cd { background: #ffedd5; color: #9a3412; }
+        .select-status { padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem; background: #fff; }
+        .input-obs { width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem; }
     </style>
 </head>
 <body>
@@ -87,16 +85,16 @@
     <div id="loginOverlay">
         <div class="login-card">
             <h2>🚘 YardSync</h2>
-            <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Controle Inteligente de Pátio</p>
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Painel de Acesso Corporativo</p>
             <div class="form-group">
-                <label>Utilizador (admin / operador)</label>
-                <input type="text" id="userInput" placeholder="admin">
+                <label>Utilizador</label>
+                <input type="text" id="userInput" placeholder="admin, operador ou ti">
             </div>
             <div class="form-group">
                 <label>Palavra-passe</label>
                 <input type="password" id="passInput" placeholder="••••••••">
             </div>
-            <div class="error-msg" id="errorMsg">Credenciais inválidas. Tente novamente.</div>
+            <div class="error-msg" id="errorMsg">Credenciais inválidas.</div>
             <button class="btn" onclick="fazerLogin()">Entrar no Sistema</button>
         </div>
     </div>
@@ -108,7 +106,8 @@
             <ul class="sidebar-menu">
                 <li><button onclick="mudarAba('dashboard', this)" class="active">📊 Visão Geral</button></li>
                 <li><button onclick="mudarAba('scanner', this)">📷 Leitor QR Code</button></li>
-                <li><button onclick="mudarAba('agendamentos', this)">📋 Tabela de Pátio</button></li>
+                <li><button onclick="mudarAba('agendamentos', this)">📋 Gestão de Entregas</button></li>
+                <li id="menuTi" style="display:none;"><button onclick="mudarAba('tiDashboard', this)">⚙️ Dashboard TI</button></li>
                 <li><button onclick="terminarSessao()" style="color: #ef4444; margin-top: 20px;">🚪 Sair</button></li>
             </ul>
         </aside>
@@ -122,8 +121,10 @@
             <!-- Dashboard -->
             <div id="dashboard" class="tab-content active">
                 <div class="stats-grid">
-                    <div class="stat-card"><span>Veículos no Pátio</span><h3 id="statPatio">0</h3></div>
-                    <div class="stat-card"><span>No Centro de Distribuição (CD)</span><h3 id="statCd">0</h3></div>
+                    <div class="stat-card"><span>Pendentes de Agendamento</span><h3 id="statPendente">0</h3></div>
+                    <div class="stat-card"><span>Agendados</span><h3 id="statAgendado">0</h3></div>
+                    <div class="stat-card"><span>Em Preparação / PDI</span><h3 id="statPreparacao">0</h3></div>
+                    <div class="stat-card"><span>Entregues</span><h3 id="statEntregue">0</h3></div>
                 </div>
             </div>
 
@@ -131,29 +132,84 @@
             <div id="scanner" class="tab-content">
                 <div class="card" style="text-align: center;">
                     <h3>Leitor de QR Code Móvel</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 20px;">Aponte a câmera para o código do veículo.</p>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">Aponte para o QR Code do veículo.</p>
                     <button class="btn" id="btnScan" onclick="iniciarScanner()">📷 Iniciar Câmera</button>
-                    <button class="btn btn-danger" id="btnStop" onclick="pararScanner()">🛑 Parar Câmera</button>
-                    <div id="reader"></div>
+                    <button class="btn btn-danger" id="btnStop" onclick="pararScanner()" style="display:none;">🛑 Parar Câmera</button>
+                    <div id="reader" style="max-width:350px; margin:20px auto; display:none;"></div>
                 </div>
             </div>
 
-            <!-- Agendamentos -->
+            <!-- Gestão de Entregas -->
             <div id="agendamentos" class="tab-content">
                 <div class="card">
-                    <h3>Controle de Agendamentos</h3>
-                    <table>
-                        <thead>
-                            <tr><th>ID</th><th>Placa / Chassi</th><th>Cliente</th><th>Entrega</th><th>Local</th></tr>
-                        </thead>
-                        <tbody id="tabelaCorpo"></tbody>
-                    </table>
+                    <h3>Controle de Preparação e Entregas</h3>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Veículo / Cliente</th>
+                                    <th>Localização</th>
+                                    <th>Status Processo</th>
+                                    <th>Data Faturamento</th>
+                                    <th>Previsão Entrega (Auto)</th>
+                                    <th>Agendamento Entrega</th>
+                                    <th>Observações</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaCorpo"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DASHBOARD DA TI (Exclusivo para TI/Admin) -->
+            <div id="tiDashboard" class="tab-content">
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3>⚙️ Regras Automáticas e SLAs</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Defina os prazos padrão para cálculo automático no sistema.</p>
+                    <div style="display: flex; gap: 15px; align-items: flex-end;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Prazo de Previsão de Entrega (Dias após Faturamento)</label>
+                            <input type="number" id="inputDiasSLA" placeholder="Ex: 10">
+                        </div>
+                        <button class="btn" onclick="salvarConfigSLA()">Atualizar Regra</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>👥 Gestão de Acessos e Contas</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Conceder novo acesso ao sistema.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 20px; align-items: flex-end;">
+                        <div class="form-group"><label>Utilizador</label><input type="text" id="newUserInput" placeholder="Nome de login"></div>
+                        <div class="form-group"><label>Palavra-passe</label><input type="password" id="newPassInput" placeholder="Senha"></div>
+                        <div class="form-group">
+                            <label>Perfil de Acesso</label>
+                            <select id="newRoleSelect" class="select-status" style="padding:11px;">
+                                <option value="Operador de Pátio">Operador de Pátio</option>
+                                <option value="Administrador">Administrador</option>
+                                <option value="TI / Gestor">TI / Gestor</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="criarUtilizador()">Adicionar Utilizador</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr><th>ID</th><th>Utilizador</th><th>Função / Permissão</th><th>Ação</th></tr>
+                            </thead>
+                            <tbody id="tabelaUtilizadores"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
+        let currentUserRole = '';
+
         async function fazerLogin() {
             const username = document.getElementById('userInput').value;
             const password = document.getElementById('passInput').value;
@@ -170,12 +226,12 @@
                 if (response.ok && data.success) {
                     localStorage.setItem('yardsync_token', data.token);
                     localStorage.setItem('yardsync_user', `${data.username} (${data.role})`);
+                    localStorage.setItem('yardsync_role', data.role);
                     abrirSistema();
                 } else {
                     errorMsg.style.display = 'block';
                 }
             } catch (err) {
-                console.error("Erro no login:", err);
                 errorMsg.style.display = 'block';
             }
         }
@@ -184,19 +240,23 @@
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('appContainer').style.display = 'flex';
             document.getElementById('userInfo').innerText = localStorage.getItem('yardsync_user');
+            
+            currentUserRole = localStorage.getItem('yardsync_role');
+            if (currentUserRole === 'TI / Gestor' || currentUserRole === 'Administrador') {
+                document.getElementById('menuTi').style.display = 'block';
+            }
+
             carregarDadosAPI();
+            carregarConfigTi();
         }
 
         function terminarSessao() {
-            localStorage.removeItem('yardsync_token');
-            localStorage.removeItem('yardsync_user');
+            localStorage.clear();
             location.reload();
         }
 
         window.onload = () => {
-            if (localStorage.getItem('yardsync_token')) {
-                abrirSistema();
-            }
+            if (localStorage.getItem('yardsync_token')) abrirSistema();
         };
 
         async function carregarDadosAPI() {
@@ -208,31 +268,138 @@
                 if (!response.ok) throw new Error('Não autorizado');
                 const dados = await response.json();
 
-                let patioCount = 0, cdCount = 0;
+                let counts = { pendente: 0, agendado: 0, preparacao: 0, entregue: 0 };
                 const tbody = document.getElementById('tabelaCorpo');
                 tbody.innerHTML = '';
 
                 dados.forEach(item => {
-                    if (item.localizacao === 'Pátio Loja') patioCount++;
-                    else if (item.localizacao === 'CD') cdCount++;
+                    if (item.statusProcesso === 'Pendente de Agendamento') counts.pendente++;
+                    else if (item.statusProcesso === 'Agendado') counts.agendado++;
+                    else if (item.statusProcesso === 'Em Preparação') counts.preparacao++;
+                    else if (item.statusProcesso === 'Entregue') counts.entregue++;
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>#${item.id}</td>
-                        <td><strong>${item.placa}</strong></td>
-                        <td>${item.cliente}</td>
-                        <td>${item.dataEntrega}</td>
-                        <td><span class="badge status-patio">${item.localizacao}</span></td>
+                        <td><strong>${item.placa}</strong><br><span style="font-size:0.75rem; color:#64748b;">${item.cliente}</span></td>
+                        <td>
+                            <select class="select-status" id="loc-${item.id}">
+                                <option value="Pátio Loja" ${item.localizacao === 'Pátio Loja' ? 'selected' : ''}>Pátio Loja</option>
+                                <option value="CD" ${item.localizacao === 'CD' ? 'selected' : ''}>CD</option>
+                                <option value="Em Trânsito" ${item.localizacao === 'Em Trânsito' ? 'selected' : ''}>Em Trânsito</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select class="select-status" id="status-${item.id}">
+                                <option value="Pendente de Agendamento" ${item.statusProcesso === 'Pendente de Agendamento' ? 'selected' : ''}>Pendente Agendamento</option>
+                                <option value="Cliente Contactado" ${item.statusProcesso === 'Cliente Contactado' ? 'selected' : ''}>Cliente Contactado</option>
+                                <option value="Agendado" ${item.statusProcesso === 'Agendado' ? 'selected' : ''}>Agendado</option>
+                                <option value="Em Preparação" ${item.statusProcesso === 'Em Preparação' ? 'selected' : ''}>Em Preparação (PDI)</option>
+                                <option value="Entregue" ${item.statusProcesso === 'Entregue' ? 'selected' : ''}>✅ Entregue</option>
+                            </select>
+                        </td>
+                        <td><input type="date" value="${item.dataFaturamento || ''}" class="select-status" id="fat-${item.id}"></td>
+                        <td><input type="date" value="${item.previsaoEntrega || ''}" class="select-status" disabled style="background:#e2e8f0;" id="prev-${item.id}"></td>
+                        <td><input type="datetime-local" value="${item.dataAgendada || ''}" class="select-status" id="aged-${item.id}"></td>
+                        <td><input type="text" value="${item.obs || ''}" class="input-obs" id="obs-${item.id}" placeholder="Obs..."></td>
+                        <td><button class="btn" onclick="salvarAlteracao(${item.id})">Salvar</button></td>
                     `;
                     tbody.appendChild(tr);
                 });
 
-                document.getElementById('statPatio').innerText = patioCount;
-                document.getElementById('statCd').innerText = cdCount;
+                document.getElementById('statPendente').innerText = counts.pendente;
+                document.getElementById('statAgendado').innerText = counts.agendado;
+                document.getElementById('statPreparacao').innerText = counts.preparacao;
+                document.getElementById('statEntregue').innerText = counts.entregue;
+
             } catch (error) {
-                console.error("Sessão expirada:", error);
                 terminarSessao();
             }
+        }
+
+        async function salvarAlteracao(id) {
+            const token = localStorage.getItem('yardsync_token');
+            const localizacao = document.getElementById(`loc-${id}`).value;
+            const statusProcesso = document.getElementById(`status-${id}`).value;
+            const dataFaturamento = document.getElementById(`fat-${id}`).value;
+            const dataAgendada = document.getElementById(`aged-${id}`).value;
+            const obs = document.getElementById(`obs-${id}`).value;
+
+            try {
+                const response = await fetch(`/api/agendamentos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ localizacao, statusProcesso, dataFaturamento, dataAgendada, obs })
+                });
+
+                if (response.ok) {
+                    alert("Dados e cálculo de previsão atualizados com sucesso!");
+                    carregarDadosAPI();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function carregarConfigTi() {
+            const token = localStorage.getItem('yardsync_token');
+            try {
+                const res = await fetch('/api/ti/config', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                document.getElementById('inputDiasSLA').value = data.config.diasAposFaturamento;
+
+                const tbody = document.getElementById('tabelaUtilizadores');
+                tbody.innerHTML = '';
+                data.users.forEach(u => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${u.id}</td>
+                        <td><strong>${u.user}</strong></td>
+                        <td>${u.role}</td>
+                        <td>${u.user !== 'admin' ? `<button class="btn btn-danger" onclick="removerUtilizador(${u.id})">Remover</button>` : 'Sistema'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {}
+        }
+
+        async function salvarConfigSLA() {
+            const token = localStorage.getItem('yardsync_token');
+            const diasAposFaturamento = document.getElementById('inputDiasSLA').value;
+            const res = await fetch('/api/ti/config', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ diasAposFaturamento })
+            });
+            if (res.ok) alert("Regra de prazo (SLA) atualizada com sucesso!");
+        }
+
+        async function criarUtilizador() {
+            const token = localStorage.getItem('yardsync_token');
+            const newUser = document.getElementById('newUserInput').value;
+            const newPass = document.getElementById('newPassInput').value;
+            const newRole = document.getElementById('newRoleSelect').value;
+
+            const res = await fetch('/api/ti/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ newUser, newPass, newRole })
+            });
+            if (res.ok) {
+                alert("Novo acesso concedido com sucesso!");
+                document.getElementById('newUserInput').value = '';
+                document.getElementById('newPassInput').value = '';
+                carregarConfigTi();
+            }
+        }
+
+        async function removerUtilizador(id) {
+            if (!confirm("Deseja revogar o acesso deste utilizador?")) return;
+            const token = localStorage.getItem('yardsync_token');
+            const res = await fetch(`/api/ti/users/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) carregarConfigTi();
         }
 
         function mudarAba(nomeAba, elementoBotao) {
@@ -240,13 +407,6 @@
             document.querySelectorAll('.sidebar-menu button').forEach(btn => btn.classList.remove('active'));
             document.getElementById(nomeAba).classList.add('active');
             elementoBotao.classList.add('active');
-
-            const titulos = {
-                'dashboard': 'Visão Geral do Pátio',
-                'scanner': 'Leitor de QR Code',
-                'agendamentos': 'Controle de Agendamentos'
-            };
-            document.getElementById('tituloAba').innerText = titulos[nomeAba];
         }
 
         let html5QrcodeScanner = null;
@@ -264,10 +424,7 @@
                     alert("QR Code lido com sucesso: " + decodedText);
                 },
                 (error) => {}
-            ).catch(err => {
-                alert("Erro ao aceder à câmara: " + err);
-                pararScanner();
-            });
+            ).catch(err => pararScanner());
         }
 
         function pararScanner() {
@@ -276,7 +433,7 @@
                     document.getElementById('reader').style.display = 'none';
                     document.getElementById('btnScan').style.display = 'inline-block';
                     document.getElementById('btnStop').style.display = 'none';
-                }).catch(err => console.error(err));
+                });
             }
         }
     </script>
