@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const { Pool } = require('pg');
 
 const app = express();
 app.use(cors());
@@ -9,44 +10,89 @@ app.use(express.static(path.join(__dirname)));
 
 const PORT = process.env.PORT || 3000;
 
-// Configurações globais de regras de negócio (Editáveis pela TI)
-let configSistema = {
-    diasAposFaturamento: 10 // Padrão: 10 dias após o faturamento
-};
+// Configuração da Conexão PostgreSQL
+// Usa a variável de ambiente DATABASE_URL (fornecida pelo Railway, Supabase ou Neon)
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || 'postgres://usuario:senha@localhost:5432/yardsync',
+    ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+});
 
-// Base de dados de utilizadores (Gerida pela TI)
-let USERS = [
-    { id: 1, user: 'admin', pass: 'bydsul2026', role: 'Administrador' },
-    { id: 2, user: 'operador', pass: 'yardsync2026', role: 'Operador de Pátio' },
-    { id: 3, user: 'ti', pass: 'yardsync_ti2026', role: 'TI / Gestor' }
-];
+// Inicialização e Criação Automática das Tabelas no Banco na Nuvem
+async function initDB() {
+    try {
+        // Tabela de Configurações / SLA
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS config (
+                id SERIAL PRIMARY KEY,
+                dias_apos_faturamento INT DEFAULT 10
+            );
+        `);
 
-// Base de dados de veículos
-let AGENDAMENTOS = [
-    { 
-        id: 1, 
-        placa: "ABC-1234", 
-        chassi: "9BWZZZ370...", 
-        cliente: "João Silva", 
-        dataFaturamento: "2026-11-01",
-        previsaoEntrega: "2026-11-11", // Calculado automaticamente (10 dias)
-        dataAgendada: "2026-11-12T14:00",
-        localizacao: "Pátio Loja",
-        statusProcesso: "Agendado",
-        obs: "Instalar insulfilm e lavagem especial."
+        // Garante 1 registro inicial de config se estiver vazio
+        const resConfig = await pool.query('SELECT * FROM config WHERE id = 1');
+        if (resConfig.rows.length === 0) {
+            await pool.query('INSERT INTO config (id, dias_apos_faturamento) VALUES (1, 10)');
+        }
+
+        // Tabela de Utilizadores
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(100) NOT NULL,
+                role VARCHAR(50) NOT NULL
+            );
+        `);
+
+        // Criar utilizadores padrão se a tabela estiver vazia
+        const resUsers = await pool.query('SELECT * FROM usuarios');
+        if (resUsers.rows.length === 0) {
+            await pool.query(`
+                INSERT INTO usuarios (username, password, role) VALUES 
+                ('admin', 'bydsul2026', 'Administrador'),
+                ('operador', 'yardsync2026', 'Operador de Pátio'),
+                ('ti', 'yardsync_ti2026', 'TI / Gestor')
+            `);
+        }
+
+        // Tabela de Veículos / Agendamentos
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS agendamentos (
+                id SERIAL PRIMARY KEY,
+                placa VARCHAR(10) NOT NULL,
+                chassi VARCHAR(50),
+                cliente VARCHAR(100) NOT NULL,
+                data_faturamento DATE,
+                previsao_entrega DATE,
+                data_agendada VARCHAR(50),
+                localizacao VARCHAR(50) DEFAULT 'CD',
+                status_processo VARCHAR(50) DEFAULT 'Pendente de Agendamento',
+                obs TEXT
+            );
+        `);
+
+        console.log('✅ PostgreSQL conectado e tabelas sincronizadas!');
+    } catch (err) {
+        console.error('❌ Erro ao inicializar PostgreSQL:', err);
     }
-];
+}
 
-// Login
-app.post('/api/login', (req, res) => {
+initDB();
+
+// --- ROTAS DE AUTENTICAÇÃO ---
+app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-    const foundUser = USERS.find(u => u.user === username && u.pass === password);
-
-    if (foundUser) {
-        const token = Buffer.from(`${username}:${Date.now()}`).toString('base64');
-        return res.json({ success: true, token, role: foundUser.role, username });
+    try {
+        const result = await pool.query('SELECT * FROM usuarios WHERE username = $1 AND password = $2', [username, password]);
+        if (result.rows.length > 0) {
+            const user = result.rows[0];
+            const token = Buffer.from(`${user.username}:${Date.now()}`).toString('base64');
+            return res.json({ success: true, token, role: user.role, username: user.username });
+        }
+        return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-    return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
 });
 
 function verificarAutenticacao(req, res, next) {
@@ -57,73 +103,138 @@ function verificarAutenticacao(req, res, next) {
     next();
 }
 
-// Listar agendamentos
-app.get('/api/agendamentos', verificarAutenticacao, (req, res) => {
-    res.json(AGENDAMENTOS);
+// --- ROTAS DE VEÍCULOS ---
+
+// Listar todos os veículos
+app.get('/api/agendamentos', verificarAutenticacao, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM agendamentos ORDER BY id DESC');
+        // Mapeia os nomes das colunas do banco para o padrão usado no front-end
+        const items = result.rows.map(row => ({
+            id: row.id,
+            placa: row.placa,
+            chassi: row.chassi,
+            cliente: row.cliente,
+            dataFaturamento: row.data_faturamento ? row.data_faturamento.toISOString().split('T')[0] : '',
+            previsaoEntrega: row.previsao_entrega ? row.previsao_entrega.toISOString().split('T')[0] : '',
+            dataAgendada: row.data_agendada || '',
+            localizacao: row.localizacao,
+            statusProcesso: row.status_processo,
+            obs: row.obs
+        }));
+        res.json(items);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// Atualizar veículo
-app.put('/api/agendamentos/:id', verificarAutenticacao, (req, res) => {
+// Cadastrar veículo manualmente
+app.post('/api/agendamentos', verificarAutenticacao, async (req, res) => {
+    const { placa, chassi, cliente, dataFaturamento, localizacao } = req.body;
+    
+    if (!placa || !cliente || !dataFaturamento) {
+        return res.status(400).json({ success: false, message: 'Preencha os campos obrigatórios.' });
+    }
+
+    try {
+        // Obter SLA configurado pela TI
+        const cfgRes = await pool.query('SELECT dias_apos_faturamento FROM config WHERE id = 1');
+        const diasSLA = cfgRes.rows[0]?.dias_apos_faturamento || 10;
+
+        // Calcular Previsão de Entrega
+        const fatDate = new Date(dataFaturamento);
+        fatDate.setDate(fatDate.getDate() + diasSLA);
+        const previsaoEntrega = fatDate.toISOString().split('T')[0];
+
+        const insertQuery = `
+            INSERT INTO agendamentos (placa, chassi, cliente, data_faturamento, previsao_entrega, localizacao, status_processo, obs)
+            VALUES ($1, $2, $3, $4, $5, $6, 'Pendente de Agendamento', 'Cadastrado via PostgreSQL Cloud')
+            RETURNING *;
+        `;
+        const values = [placa.toUpperCase(), chassi || 'N/D', cliente, dataFaturamento, previsaoEntrega, localizacao || 'CD'];
+        const result = await pool.query(insertQuery, values);
+
+        res.json({ success: true, item: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Atualizar dados de um veículo
+app.put('/api/agendamentos/:id', verificarAutenticacao, async (req, res) => {
     const { id } = req.params;
     const { localizacao, statusProcesso, dataFaturamento, dataAgendada, obs } = req.body;
 
-    const idx = AGENDAMENTOS.findIndex(item => item.id === parseInt(id));
-    if (idx !== -1) {
-        let novaPrevisao = AGENDAMENTOS[idx].previsaoEntrega;
-        
-        // Se a data de faturamento mudou, recalcula a previsão automaticamente com base no SLA configurado pela TI
-        if (dataFaturamento && dataFaturamento !== AGENDAMENTOS[idx].dataFaturamento) {
+    try {
+        let novaPrevisao = null;
+        if (dataFaturamento) {
+            const cfgRes = await pool.query('SELECT dias_apos_faturamento FROM config WHERE id = 1');
+            const diasSLA = cfgRes.rows[0]?.dias_apos_faturamento || 10;
             const fatDate = new Date(dataFaturamento);
-            fatDate.setDate(fatDate.getDate() + configSistema.diasAposFaturamento);
+            fatDate.setDate(fatDate.getDate() + diasSLA);
             novaPrevisao = fatDate.toISOString().split('T')[0];
         }
 
-        AGENDAMENTOS[idx] = {
-            ...AGENDAMENTOS[idx],
-            localizacao: localizacao || AGENDAMENTOS[idx].localizacao,
-            statusProcesso: statusProcesso || AGENDAMENTOS[idx].statusProcesso,
-            dataFaturamento: dataFaturamento || AGENDAMENTOS[idx].dataFaturamento,
-            previsaoEntrega: novaPrevisao,
-            dataAgendada: dataAgendada !== undefined ? dataAgendada : AGENDAMENTOS[idx].dataAgendada,
-            obs: obs !== undefined ? obs : AGENDAMENTOS[idx].obs
-        };
-        return res.json({ success: true, item: AGENDAMENTOS[idx] });
+        const updateQuery = `
+            UPDATE agendamentos 
+            SET localizacao = COALESCE($1, localizacao),
+                status_processo = COALESCE($2, status_processo),
+                data_faturamento = COALESCE($3, data_faturamento),
+                previsao_entrega = COALESCE($4, previsao_entrega),
+                data_agendada = COALESCE($5, data_agendada),
+                obs = COALESCE($6, obs)
+            WHERE id = $7
+            RETURNING *;
+        `;
+        const values = [localizacao, statusProcesso, dataFaturamento || null, novaPrevisao, dataAgendada, obs, id];
+        const result = await pool.query(updateQuery, values);
+
+        res.json({ success: true, item: result.rows[0] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-    res.status(404).json({ message: 'Veículo não encontrado.' });
 });
 
 // --- ROTAS DA DASHBOARD DA TI ---
 
-// Obter configurações e utilizadores
-app.get('/api/ti/config', verificarAutenticacao, (req, res) => {
-    res.json({ config: configSistema, users: USERS });
+app.get('/api/ti/config', verificarAutenticacao, async (req, res) => {
+    try {
+        const configRes = await pool.query('SELECT dias_apos_faturamento FROM config WHERE id = 1');
+        const usersRes = await pool.query('SELECT id, username as user, role FROM usuarios ORDER BY id ASC');
+        res.json({ config: { diasAposFaturamento: configRes.rows[0]?.dias_apos_faturamento || 10 }, users: usersRes.rows });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// Atualizar regras de prazo (SLA)
-app.put('/api/ti/config', verificarAutenticacao, (req, res) => {
+app.put('/api/ti/config', verificarAutenticacao, async (req, res) => {
     const { diasAposFaturamento } = req.body;
-    if (diasAposFaturamento) {
-        configSistema.diasAposFaturamento = parseInt(diasAposFaturamento);
+    try {
+        await pool.query('UPDATE config SET dias_apos_faturamento = $1 WHERE id = 1', [parseInt(diasAposFaturamento)]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, config: configSistema });
 });
 
-// Criar novo utilizador (Acesso)
-app.post('/api/ti/users', verificarAutenticacao, (req, res) => {
+app.post('/api/ti/users', verificarAutenticacao, async (req, res) => {
     const { newUser, newPass, newRole } = req.body;
-    if (!newUser || !newPass || !newRole) {
-        return res.status(400).json({ success: false, message: 'Preencha todos os campos.' });
+    try {
+        await pool.query('INSERT INTO usuarios (username, password, role) VALUES ($1, $2, $3)', [newUser, newPass, newRole]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-    const id = USERS.length + 1;
-    USERS.push({ id, user: newUser, pass: newPass, role: newRole });
-    res.json({ success: true, users: USERS });
 });
 
-// Remover utilizador
-app.delete('/api/ti/users/:id', verificarAutenticacao, (req, res) => {
-    const id = parseInt(req.params.id);
-    USERS = USERS.filter(u => u.id !== id);
-    res.json({ success: true, users: USERS });
+app.delete('/api/ti/users/:id', verificarAutenticacao, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.get('*', (req, res) => {
@@ -131,5 +242,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`YardSync rodando na porta ${PORT}`);
+    console.log(`YardSync a rodar na porta ${PORT}`);
 });
