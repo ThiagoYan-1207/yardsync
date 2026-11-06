@@ -1,441 +1,579 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YardSync | Gestão Inteligente e TI</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <style>
-        :root {
-            --sidebar-width: 260px;
-            --primary: #0f172a;
-            --accent: #2563eb;
-            --accent-hover: #1d4ed8;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --text-main: #334155;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --radius: 12px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#20282D">
+<title>YardSync - Controle de Pátio</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --asfalto: #20282D;
+    --concreto: #EEF0F1;
+    --papel: #FFFFFF;
+    --texto: #1B2327;
+    --suave: #5B6870;
+    --linha: #D6DADD;
+    --faixa: #F5B700;
+    --ok: #1F7A52;
+    --erro: #B93426;
+    --c-cd: #4A5A66;
+    --c-loja: #1F7A52;
+    --c-transito: #B7791F;
+    --c-solicitado: #2F5FA8;
+    --raio: 6px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--concreto); color: var(--texto); line-height: 1.45; padding-bottom: 76px; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--faixa); outline-offset: 2px; }
+  .hidden { display: none !important; }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
+  /* Cabeçalho com a faixa tracejada de sinalização de vaga */
+  header { background: var(--asfalto); color: #fff; padding: 14px 16px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; position: relative; }
+  header::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: repeating-linear-gradient(90deg, var(--faixa) 0 18px, transparent 18px 30px); }
+  header h1 { font-size: 20px; margin: 0; letter-spacing: -0.2px; }
+  header .quem { font-size: 13px; color: #C5CDD2; text-align: right; }
+  header .quem button { background: none; border: 0; color: var(--faixa); padding: 4px 0 0 8px; font-size: 13px; cursor: pointer; min-height: 0; }
 
-        /* Login */
-        #loginOverlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 1000;
-        }
-        .login-card {
-            background: var(--card-bg); padding: 40px; border-radius: var(--radius);
-            width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            display: flex; flex-direction: column; gap: 20px;
-        }
-        .login-card h2 { color: var(--primary); text-align: center; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
-        .form-group input, .form-group select { padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; }
-        .error-msg { color: #ef4444; font-size: 0.8rem; text-align: center; display: none; }
+  main { max-width: 760px; margin: 0 auto; padding: 14px; }
+  h2 { font-size: 18px; margin: 4px 0 12px; }
+  h3 { font-size: 15px; margin: 18px 0 8px; }
+  .painel { background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio); padding: 14px; margin-bottom: 14px; }
 
-        /* Layout */
-        #appContainer { display: none; width: 100%; }
-        aside {
-            width: var(--sidebar-width); background-color: var(--primary); color: white;
-            display: flex; flex-direction: column; position: fixed; height: 100vh; left: 0; top: 0;
-        }
-        .sidebar-brand { padding: 24px; font-size: 1.25rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-menu { list-style: none; padding: 20px 12px; display: flex; flex-direction: column; gap: 8px; }
-        .sidebar-menu button {
-            width: 100%; background: none; border: none; color: #94a3b8;
-            padding: 12px 16px; text-align: left; font-size: 0.95rem; font-weight: 500;
-            border-radius: 8px; cursor: pointer; transition: all 0.2s;
-        }
-        .sidebar-menu button:hover, .sidebar-menu button.active { background-color: var(--accent); color: white; }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--suave); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #B5BCC1; border-radius: var(--raio); background: #fff; }
+  textarea { min-height: 76px; resize: vertical; }
+  .linha2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .acoes { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 
-        main { margin-left: var(--sidebar-width); flex: 1; padding: 30px; display: flex; flex-direction: column; gap: 24px; }
-        .topbar { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 16px 24px; border-radius: var(--radius); border: 1px solid var(--border-color); }
-        
-        .tab-content { display: none; flex-direction: column; gap: 24px; }
-        .tab-content.active { display: flex; }
+  button.btn { min-height: 44px; padding: 10px 16px; border-radius: var(--raio); border: 1px solid var(--asfalto); background: var(--asfalto); color: #fff; font-weight: 600; cursor: pointer; flex: 1; }
+  button.btn:hover { background: #121719; }
+  button.btn.sec { background: #fff; color: var(--asfalto); }
+  button.btn.sec:hover { background: var(--concreto); }
+  button.btn.perigo { background: #fff; color: var(--erro); border-color: var(--erro); }
+  button.btn:disabled { opacity: .55; cursor: wait; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .stat-card { background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); }
-        .stat-card h3 { font-size: 1.75rem; font-weight: 700; color: var(--primary); margin-top: 6px; }
+  /* Navegação inferior (polegar) */
+  nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--asfalto); display: flex; z-index: 5; padding-bottom: env(safe-area-inset-bottom, 0); }
+  nav button { flex: 1; min-height: 56px; background: none; border: 0; color: #B7C0C5; font-weight: 600; font-size: 14px; cursor: pointer; border-top: 3px solid transparent; }
+  nav button[aria-current="page"] { color: #fff; border-top-color: var(--faixa); }
 
-        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 24px; }
-        .btn { background-color: var(--accent); color: white; border: none; padding: 10px 16px; font-weight: 600; border-radius: 8px; cursor: pointer; }
-        .btn:hover { background-color: var(--accent-hover); }
-        .btn-danger { background-color: #ef4444; }
-        .btn-danger:hover { background-color: #dc2626; }
+  /* Resumo */
+  .resumo { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  @media (min-width: 560px) { .resumo { grid-template-columns: repeat(3, 1fr); } }
+  .num { background: var(--papel); border: 1px solid var(--linha); border-left: 6px solid var(--cor, var(--asfalto)); border-radius: var(--raio); padding: 10px 12px; text-align: left; cursor: pointer; width: 100%; }
+  .num b { display: block; font-size: 26px; line-height: 1.1; }
+  .num span { font-size: 13px; color: var(--suave); }
+  .num[aria-pressed="true"] { background: #FFF8E1; border-color: var(--faixa); border-left-color: var(--cor, var(--faixa)); }
 
-        .table-responsive { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
-        th, td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        th { background-color: #f8fafc; color: var(--primary); font-weight: 600; }
-        
-        .select-status { padding: 6px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem; background: #fff; }
-        .input-obs { width: 100%; padding: 6px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.8rem; }
-    </style>
+  /* Lista de veículos */
+  .veiculo { display: block; width: 100%; text-align: left; background: var(--papel); border: 1px solid var(--linha); border-radius: var(--raio); padding: 12px; margin-bottom: 8px; cursor: pointer; }
+  .veiculo:hover { border-color: var(--asfalto); }
+  .veiculo .topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .placa { font-weight: 800; font-size: 18px; letter-spacing: 1px; background: #fff; border: 2px solid var(--asfalto); border-radius: 4px; padding: 0 8px; display: inline-block; }
+  .veiculo .meta { color: var(--suave); font-size: 14px; margin-top: 6px; }
+  .chip { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; padding: 3px 9px; border-radius: 99px; background: var(--c-cd); white-space: nowrap; }
+  .chip[data-loc="Pátio Loja"] { background: var(--c-loja); }
+  .chip[data-loc="Em Trânsito"] { background: var(--c-transito); }
+  .chip[data-loc="Solicitado do CD"] { background: var(--c-solicitado); }
+  .atraso { color: var(--erro); font-weight: 700; }
+  .vazio { text-align: center; color: var(--suave); padding: 24px 8px; }
+
+  /* Scanner */
+  #reader { width: 100%; max-width: 420px; margin: 12px auto 0; }
+
+  /* Ficha (dialog) */
+  dialog { width: min(640px, 100%); max-height: 100%; border: 0; border-radius: 10px 10px 0 0; padding: 0; margin: auto auto 0; background: var(--papel); color: var(--texto); }
+  dialog::backdrop { background: rgba(20, 26, 29, .6); }
+  .ficha-topo { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--linha); position: sticky; top: 0; background: var(--papel); }
+  .ficha-corpo { padding: 4px 16px 20px; }
+  dl.dados { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 12px 0; font-size: 15px; }
+  dl.dados dt { color: var(--suave); }
+  dl.dados dd { margin: 0; font-weight: 600; word-break: break-word; }
+  ul.hist { list-style: none; margin: 0; padding: 0; font-size: 14px; color: var(--suave); }
+  ul.hist li { padding: 6px 0; border-top: 1px solid var(--linha); }
+
+  /* Usuários */
+  .usuario { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--linha); }
+  .usuario button { flex: 0 0 auto; min-height: 36px; }
+
+  /* Aviso */
+  #aviso { position: fixed; left: 12px; right: 12px; bottom: 76px; z-index: 20; max-width: 560px; margin: 0 auto; padding: 12px 14px; border-radius: var(--raio); background: var(--asfalto); color: #fff; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+  #aviso.erro { background: var(--erro); }
+  #aviso.ok { background: var(--ok); }
+
+  #login { max-width: 380px; margin: 40px auto; padding: 0 14px; }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
 </head>
 <body>
 
-    <!-- Login -->
-    <div id="loginOverlay">
-        <div class="login-card">
-            <h2>🚘 YardSync</h2>
-            <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Painel de Acesso Corporativo</p>
-            <div class="form-group">
-                <label>Utilizador</label>
-                <input type="text" id="userInput" placeholder="admin, operador ou ti">
-            </div>
-            <div class="form-group">
-                <label>Palavra-passe</label>
-                <input type="password" id="passInput" placeholder="••••••••">
-            </div>
-            <div class="error-msg" id="errorMsg">Credenciais inválidas.</div>
-            <button class="btn" onclick="fazerLogin()">Entrar no Sistema</button>
+<header>
+  <h1>YardSync</h1>
+  <div class="quem hidden" id="quem"><span id="quem-nome"></span><button type="button" id="btn-sair">Sair</button></div>
+</header>
+
+<!-- Login -->
+<section id="login" class="hidden">
+  <div class="painel">
+    <h2>Entrar no sistema</h2>
+    <label for="l-user">Usuário</label>
+    <input id="l-user" autocomplete="username" autocapitalize="none">
+    <label for="l-senha">Senha</label>
+    <input id="l-senha" type="password" autocomplete="current-password">
+    <div class="acoes"><button class="btn" id="btn-login" type="button">Entrar</button></div>
+  </div>
+</section>
+
+<main id="app" class="hidden">
+
+  <!-- Pátio -->
+  <section id="v-patio">
+    <h2>Pátio e agendamentos</h2>
+    <div class="resumo" id="resumo"></div>
+    <div class="painel">
+      <label for="busca" style="margin-top:0">Buscar por placa, chassi ou cliente</label>
+      <input id="busca" type="search" placeholder="Ex.: ABC1234 ou João">
+      <div class="acoes">
+        <button type="button" class="btn sec" id="f-hoje" aria-pressed="false">Entregas de hoje</button>
+        <button type="button" class="btn sec" id="f-limpar">Limpar filtros</button>
+      </div>
+    </div>
+    <div id="lista">Carregando...</div>
+  </section>
+
+  <!-- Escanear -->
+  <section id="v-scan" class="hidden">
+    <h2>Escanear QR Code do veículo</h2>
+    <div class="painel">
+      <button type="button" class="btn" id="btn-scan">Abrir câmera</button>
+      <div id="reader"></div>
+      <p style="color:var(--suave);font-size:14px;margin-bottom:0">A câmera só funciona em conexão segura (HTTPS). Se o QR Code estiver danificado, digite a placa abaixo.</p>
+    </div>
+    <div class="painel">
+      <label for="placa-manual" style="margin-top:0">Digitar placa</label>
+      <input id="placa-manual" placeholder="ABC1234 ou ABC1D23" autocapitalize="characters" maxlength="8">
+      <div class="acoes"><button type="button" class="btn" id="btn-manual">Buscar veículo</button></div>
+    </div>
+  </section>
+
+  <!-- Novo veículo -->
+  <section id="v-novo" class="hidden">
+    <h2>Cadastrar veículo</h2>
+    <div class="painel">
+      <label for="n-placa" style="margin-top:0">Placa</label>
+      <input id="n-placa" autocapitalize="characters" maxlength="8" placeholder="ABC1234 ou ABC1D23">
+      <label for="n-chassi">Chassi</label>
+      <input id="n-chassi" maxlength="40">
+      <label for="n-cliente">Cliente</label>
+      <input id="n-cliente" maxlength="120">
+      <div class="linha2">
+        <div>
+          <label for="n-fat">Data de faturamento</label>
+          <input id="n-fat" type="date">
         </div>
+        <div>
+          <label for="n-loc">Localização inicial</label>
+          <select id="n-loc"></select>
+        </div>
+      </div>
+      <p id="n-previsao" style="color:var(--suave);font-size:14px">A previsão de entrega é calculada ao salvar: faturamento + dias de SLA.</p>
+      <div class="acoes"><button type="button" class="btn" id="btn-novo">Cadastrar veículo</button></div>
+    </div>
+  </section>
+
+  <!-- TI -->
+  <section id="v-ti" class="hidden">
+    <h2>Painel de TI</h2>
+    <div class="painel">
+      <h3 style="margin-top:0">Prazo de entrega (SLA)</h3>
+      <label for="ti-sla">Dias após o faturamento</label>
+      <input id="ti-sla" type="number" min="0" max="365">
+      <div class="acoes"><button type="button" class="btn" id="btn-sla">Salvar SLA</button></div>
+    </div>
+    <div class="painel">
+      <h3 style="margin-top:0">Usuários</h3>
+      <div id="ti-usuarios"></div>
+      <h3>Novo usuário</h3>
+      <label for="u-nome">Usuário</label>
+      <input id="u-nome" autocapitalize="none" autocomplete="off">
+      <label for="u-senha">Senha (mínimo 8 caracteres)</label>
+      <input id="u-senha" type="password" autocomplete="new-password">
+      <label for="u-role">Perfil</label>
+      <select id="u-role">
+        <option value="operador">Operador de pátio</option>
+        <option value="administrador">Administrador</option>
+        <option value="ti">TI / Gestor</option>
+      </select>
+      <div class="acoes"><button type="button" class="btn" id="btn-user">Criar usuário</button></div>
+    </div>
+  </section>
+
+  <!-- Conta (todos os perfis) -->
+  <section id="v-conta" class="hidden">
+    <h2>Minha conta</h2>
+    <div class="painel">
+      <h3 style="margin-top:0">Trocar senha</h3>
+      <label for="s-atual">Senha atual</label>
+      <input id="s-atual" type="password" autocomplete="current-password">
+      <label for="s-nova">Nova senha (mínimo 8 caracteres)</label>
+      <input id="s-nova" type="password" autocomplete="new-password">
+      <div class="acoes"><button type="button" class="btn" id="btn-senha">Alterar senha</button></div>
+    </div>
+  </section>
+</main>
+
+<nav id="menu" class="hidden" aria-label="Seções">
+  <button type="button" data-v="patio" aria-current="page">Pátio</button>
+  <button type="button" data-v="scan">Escanear</button>
+  <button type="button" data-v="novo" data-roles="administrador,ti">Cadastrar</button>
+  <button type="button" data-v="ti" data-roles="ti">TI</button>
+  <button type="button" data-v="conta">Conta</button>
+</nav>
+
+<!-- Ficha do veículo -->
+<dialog id="ficha" aria-labelledby="f-titulo">
+  <div class="ficha-topo">
+    <span class="placa" id="f-titulo"></span>
+    <button type="button" class="btn sec" id="f-fechar" style="flex:0 0 auto;min-height:40px">Fechar</button>
+  </div>
+  <div class="ficha-corpo">
+    <dl class="dados" id="f-dados"></dl>
+
+    <h3>Localização</h3>
+    <label for="f-loc">Nova localização</label>
+    <select id="f-loc"></select>
+    <div class="acoes"><button type="button" class="btn" id="f-salvar-loc">Salvar localização</button></div>
+
+    <div id="f-admin" class="hidden">
+      <h3>Dados do atendimento</h3>
+      <label for="f-status">Status</label>
+      <select id="f-status"></select>
+      <div class="linha2">
+        <div><label for="f-ag">Entrega agendada</label><input id="f-ag" type="datetime-local"></div>
+        <div><label for="f-fat">Faturamento</label><input id="f-fat" type="date"></div>
+      </div>
+      <label for="f-cliente">Cliente</label>
+      <input id="f-cliente" maxlength="120">
+      <label for="f-chassi">Chassi</label>
+      <input id="f-chassi" maxlength="40">
+      <label for="f-obs">Observações</label>
+      <textarea id="f-obs" maxlength="500"></textarea>
+      <div class="acoes">
+        <button type="button" class="btn" id="f-salvar">Salvar alterações</button>
+        <button type="button" class="btn perigo hidden" id="f-excluir">Excluir veículo</button>
+      </div>
     </div>
 
-    <!-- Aplicação Principal -->
-    <div id="appContainer">
-        <aside>
-            <div class="sidebar-brand">🚘 YardSync</div>
-            <ul class="sidebar-menu">
-                <li><button onclick="mudarAba('dashboard', this)" class="active">📊 Visão Geral</button></li>
-                <li><button onclick="mudarAba('scanner', this)">📷 Leitor QR Code</button></li>
-                <li><button onclick="mudarAba('agendamentos', this)">📋 Gestão de Entregas</button></li>
-                <li id="menuTi" style="display:none;"><button onclick="mudarAba('tiDashboard', this)">⚙️ Dashboard TI</button></li>
-                <li><button onclick="terminarSessao()" style="color: #ef4444; margin-top: 20px;">🚪 Sair</button></li>
-            </ul>
-        </aside>
+    <h3>Histórico de movimentação</h3>
+    <ul class="hist" id="f-hist"></ul>
+  </div>
+</dialog>
 
-        <main>
-            <div class="topbar">
-                <h2 id="tituloAba">Visão Geral do Pátio</h2>
-                <div id="userInfo" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);"></div>
-            </div>
+<div id="aviso" class="hidden" role="status" aria-live="polite"></div>
 
-            <!-- Dashboard -->
-            <div id="dashboard" class="tab-content active">
-                <div class="stats-grid">
-                    <div class="stat-card"><span>Pendentes de Agendamento</span><h3 id="statPendente">0</h3></div>
-                    <div class="stat-card"><span>Agendados</span><h3 id="statAgendado">0</h3></div>
-                    <div class="stat-card"><span>Em Preparação / PDI</span><h3 id="statPreparacao">0</h3></div>
-                    <div class="stat-card"><span>Entregues</span><h3 id="statEntregue">0</h3></div>
-                </div>
-            </div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-            <!-- Scanner -->
-            <div id="scanner" class="tab-content">
-                <div class="card" style="text-align: center;">
-                    <h3>Leitor de QR Code Móvel</h3>
-                    <p style="color: var(--text-muted); margin-bottom: 20px;">Aponte para o QR Code do veículo.</p>
-                    <button class="btn" id="btnScan" onclick="iniciarScanner()">📷 Iniciar Câmera</button>
-                    <button class="btn btn-danger" id="btnStop" onclick="pararScanner()" style="display:none;">🛑 Parar Câmera</button>
-                    <div id="reader" style="max-width:350px; margin:20px auto; display:none;"></div>
-                </div>
-            </div>
+  let token = localStorage.getItem('yardsync_token');
+  let usuario = null;
+  let LOCS = ['Pátio Loja', 'CD', 'Em Trânsito', 'Solicitado do CD'];
+  let STATUS = [];
+  let placaAtual = '';
+  let filtros = { localizacao: '', dia: '' };
 
-            <!-- Gestão de Entregas -->
-            <div id="agendamentos" class="tab-content">
-                <div class="card">
-                    <h3>Controle de Preparação e Entregas</h3>
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Veículo / Cliente</th>
-                                    <th>Localização</th>
-                                    <th>Status Processo</th>
-                                    <th>Data Faturamento</th>
-                                    <th>Previsão Entrega (Auto)</th>
-                                    <th>Agendamento Entrega</th>
-                                    <th>Observações</th>
-                                    <th>Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabelaCorpo"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+  /* ---------- Utilitários ---------- */
+  const fmtPlaca = (p) => (/^[A-Z]{3}\d{4}$/.test(p || '') ? p.slice(0, 3) + '-' + p.slice(3) : p || '');
+  const fmtData = (s) => (s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : '-');
+  const fmtDH = (s) => (s ? fmtData(s) + ' ' + s.slice(11, 16) : '-');
+  const hojeISO = () => new Date().toLocaleDateString('en-CA');
 
-            <!-- DASHBOARD DA TI (Exclusivo para TI/Admin) -->
-            <div id="tiDashboard" class="tab-content">
-                <div class="card" style="margin-bottom: 20px;">
-                    <h3>⚙️ Regras Automáticas e SLAs</h3>
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Defina os prazos padrão para cálculo automático no sistema.</p>
-                    <div style="display: flex; gap: 15px; align-items: flex-end;">
-                        <div class="form-group" style="flex:1;">
-                            <label>Prazo de Previsão de Entrega (Dias após Faturamento)</label>
-                            <input type="number" id="inputDiasSLA" placeholder="Ex: 10">
-                        </div>
-                        <button class="btn" onclick="salvarConfigSLA()">Atualizar Regra</button>
-                    </div>
-                </div>
+  let timerAviso;
+  function aviso(msg, tipo) {
+    const a = $('aviso');
+    a.textContent = msg;
+    a.className = tipo || '';
+    clearTimeout(timerAviso);
+    timerAviso = setTimeout(() => a.classList.add('hidden'), 4500);
+  }
 
-                <div class="card">
-                    <h3>👥 Gestão de Acessos e Contas</h3>
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Conceder novo acesso ao sistema.</p>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 20px; align-items: flex-end;">
-                        <div class="form-group"><label>Utilizador</label><input type="text" id="newUserInput" placeholder="Nome de login"></div>
-                        <div class="form-group"><label>Palavra-passe</label><input type="password" id="newPassInput" placeholder="Senha"></div>
-                        <div class="form-group">
-                            <label>Perfil de Acesso</label>
-                            <select id="newRoleSelect" class="select-status" style="padding:11px;">
-                                <option value="Operador de Pátio">Operador de Pátio</option>
-                                <option value="Administrador">Administrador</option>
-                                <option value="TI / Gestor">TI / Gestor</option>
-                            </select>
-                        </div>
-                        <button class="btn" onclick="criarUtilizador()">Adicionar Utilizador</button>
-                    </div>
+  async function api(caminho, opts = {}) {
+    const r = await fetch('/api' + caminho, {
+      method: opts.method || 'GET',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    let d = null;
+    try { d = await r.json(); } catch (e) { /* resposta sem JSON */ }
+    if (r.status === 401 && token) { sair(); throw new Error('Sessão expirada. Entre novamente.'); }
+    if (!r.ok) throw new Error((d && d.mensagem) || 'Erro ' + r.status);
+    return d;
+  }
 
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr><th>ID</th><th>Utilizador</th><th>Função / Permissão</th><th>Ação</th></tr>
-                            </thead>
-                            <tbody id="tabelaUtilizadores"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+  // Evita clique duplo enquanto a chamada está em andamento
+  async function acao(btn, fn) {
+    btn.disabled = true;
+    try { await fn(); } catch (e) { aviso(e.message || 'Falha de conexão com o servidor.', 'erro'); }
+    finally { btn.disabled = false; }
+  }
 
-    <script>
-        let currentUserRole = '';
+  /* ---------- Login / sessão ---------- */
+  async function iniciar() {
+    if (!token) return mostrarLogin();
+    try {
+      const me = await api('/me');
+      usuario = me.usuario; LOCS = me.localizacoes; STATUS = me.status;
+      mostrarApp();
+    } catch (e) { mostrarLogin(); }
+  }
 
-        async function fazerLogin() {
-            const username = document.getElementById('userInput').value;
-            const password = document.getElementById('passInput').value;
-            const errorMsg = document.getElementById('errorMsg');
+  function mostrarLogin() {
+    ['app', 'menu', 'quem'].forEach((i) => $(i).classList.add('hidden'));
+    $('login').classList.remove('hidden');
+  }
 
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await response.json();
+  function sair() {
+    token = null; usuario = null;
+    localStorage.removeItem('yardsync_token');
+    fecharScanner();
+    mostrarLogin();
+  }
 
-                if (response.ok && data.success) {
-                    localStorage.setItem('yardsync_token', data.token);
-                    localStorage.setItem('yardsync_user', `${data.username} (${data.role})`);
-                    localStorage.setItem('yardsync_role', data.role);
-                    abrirSistema();
-                } else {
-                    errorMsg.style.display = 'block';
-                }
-            } catch (err) {
-                errorMsg.style.display = 'block';
-            }
-        }
+  $('btn-login').onclick = (ev) => acao(ev.currentTarget, async () => {
+    const d = await api('/login', { method: 'POST', body: { username: $('l-user').value, password: $('l-senha').value } });
+    token = d.token;
+    localStorage.setItem('yardsync_token', token);
+    $('l-senha').value = '';
+    await iniciar();
+  });
+  $('l-senha').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-login').click(); });
+  $('btn-sair').onclick = sair;
 
-        function abrirSistema() {
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'flex';
-            document.getElementById('userInfo').innerText = localStorage.getItem('yardsync_user');
-            
-            currentUserRole = localStorage.getItem('yardsync_role');
-            if (currentUserRole === 'TI / Gestor' || currentUserRole === 'Administrador') {
-                document.getElementById('menuTi').style.display = 'block';
-            }
+  const NOMES_PERFIL = { operador: 'Operador', administrador: 'Administrador', ti: 'TI / Gestor' };
 
-            carregarDadosAPI();
-            carregarConfigTi();
-        }
+  function mostrarApp() {
+    $('login').classList.add('hidden');
+    ['app', 'menu', 'quem'].forEach((i) => $(i).classList.remove('hidden'));
+    $('quem-nome').textContent = usuario.username + ' (' + NOMES_PERFIL[usuario.role] + ')';
+    document.querySelectorAll('nav button[data-roles]').forEach((b) => b.classList.toggle('hidden', !b.dataset.roles.split(',').includes(usuario.role)));
+    const opts = (lista) => lista.map((x) => `<option>${esc(x)}</option>`).join('');
+    $('f-loc').innerHTML = opts(LOCS);
+    $('n-loc').innerHTML = opts(LOCS);
+    $('f-status').innerHTML = opts(STATUS);
+    $('n-fat').value = hojeISO();
+    irPara('patio');
+  }
 
-        function terminarSessao() {
-            localStorage.clear();
-            location.reload();
-        }
+  /* ---------- Navegação ---------- */
+  function irPara(v) {
+    ['patio', 'scan', 'novo', 'ti', 'conta'].forEach((s) => $('v-' + s).classList.toggle('hidden', s !== v));
+    document.querySelectorAll('nav button').forEach((b) => (b.dataset.v === v ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
+    if (v !== 'scan') fecharScanner();
+    if (v === 'patio') carregarPatio();
+    if (v === 'ti') carregarTI();
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('nav button').forEach((b) => (b.onclick = () => irPara(b.dataset.v)));
 
-        window.onload = () => {
-            if (localStorage.getItem('yardsync_token')) abrirSistema();
-        };
+  /* ---------- Pátio ---------- */
+  const CORES = { 'Pátio Loja': 'var(--c-loja)', CD: 'var(--c-cd)', 'Em Trânsito': 'var(--c-transito)', 'Solicitado do CD': 'var(--c-solicitado)' };
 
-        async function carregarDadosAPI() {
-            const token = localStorage.getItem('yardsync_token');
-            try {
-                const response = await fetch('/api/agendamentos', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error('Não autorizado');
-                const dados = await response.json();
+  async function carregarPatio() {
+    try {
+      const q = new URLSearchParams();
+      if ($('busca').value.trim()) q.set('busca', $('busca').value.trim());
+      if (filtros.localizacao) q.set('localizacao', filtros.localizacao);
+      if (filtros.dia) q.set('dia', filtros.dia);
+      const [res, lista] = await Promise.all([api('/resumo'), api('/agendamentos?' + q)]);
 
-                let counts = { pendente: 0, agendado: 0, preparacao: 0, entregue: 0 };
-                const tbody = document.getElementById('tabelaCorpo');
-                tbody.innerHTML = '';
+      $('resumo').innerHTML =
+        LOCS.map((l) => `<button type="button" class="num" style="--cor:${CORES[l]}" data-loc="${esc(l)}" aria-pressed="${filtros.localizacao === l}"><b>${res.porLocalizacao[l] || 0}</b><span>${esc(l)}</span></button>`).join('') +
+        `<div class="num" style="--cor:var(--faixa);cursor:default"><b>${res.entregasHoje}</b><span>Entregas de hoje</span></div>` +
+        `<div class="num" style="--cor:var(--erro);cursor:default"><b>${res.atrasados}</b><span>Sem agendamento e atrasados</span></div>`;
+      document.querySelectorAll('.num[data-loc]').forEach((b) => (b.onclick = () => {
+        filtros.localizacao = filtros.localizacao === b.dataset.loc ? '' : b.dataset.loc;
+        carregarPatio();
+      }));
+      $('f-hoje').setAttribute('aria-pressed', String(filtros.dia === 'hoje'));
 
-                dados.forEach(item => {
-                    if (item.statusProcesso === 'Pendente de Agendamento') counts.pendente++;
-                    else if (item.statusProcesso === 'Agendado') counts.agendado++;
-                    else if (item.statusProcesso === 'Em Preparação') counts.preparacao++;
-                    else if (item.statusProcesso === 'Entregue') counts.entregue++;
+      if (!lista.length) { $('lista').innerHTML = '<div class="vazio">Nenhum veículo encontrado com esses filtros.</div>'; return; }
+      const hoje = hojeISO();
+      $('lista').innerHTML = lista.map((v) => {
+        const atrasado = v.statusProcesso !== 'Entregue' && !v.dataAgendada && v.previsaoEntrega && v.previsaoEntrega < hoje;
+        const quando = v.dataAgendada ? 'Agendado: ' + fmtDH(v.dataAgendada) : 'Previsão: ' + fmtData(v.previsaoEntrega);
+        return `<button type="button" class="veiculo" data-placa="${esc(v.placa)}">
+          <div class="topo"><span class="placa">${esc(fmtPlaca(v.placa))}</span><span class="chip" data-loc="${esc(v.localizacao)}">${esc(v.localizacao)}</span></div>
+          <div class="meta">${esc(v.cliente || 'Sem cliente')} · ${esc(v.statusProcesso)}<br><span class="${atrasado ? 'atraso' : ''}">${esc(quando)}${atrasado ? ' (atrasado)' : ''}</span></div>
+        </button>`;
+      }).join('');
+      document.querySelectorAll('.veiculo').forEach((b) => (b.onclick = () => abrirFicha(b.dataset.placa)));
+    } catch (e) { $('lista').innerHTML = '<div class="vazio">' + esc(e.message) + '</div>'; }
+  }
 
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>${item.placa}</strong><br><span style="font-size:0.75rem; color:#64748b;">${item.cliente}</span></td>
-                        <td>
-                            <select class="select-status" id="loc-${item.id}">
-                                <option value="Pátio Loja" ${item.localizacao === 'Pátio Loja' ? 'selected' : ''}>Pátio Loja</option>
-                                <option value="CD" ${item.localizacao === 'CD' ? 'selected' : ''}>CD</option>
-                                <option value="Em Trânsito" ${item.localizacao === 'Em Trânsito' ? 'selected' : ''}>Em Trânsito</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select class="select-status" id="status-${item.id}">
-                                <option value="Pendente de Agendamento" ${item.statusProcesso === 'Pendente de Agendamento' ? 'selected' : ''}>Pendente Agendamento</option>
-                                <option value="Cliente Contactado" ${item.statusProcesso === 'Cliente Contactado' ? 'selected' : ''}>Cliente Contactado</option>
-                                <option value="Agendado" ${item.statusProcesso === 'Agendado' ? 'selected' : ''}>Agendado</option>
-                                <option value="Em Preparação" ${item.statusProcesso === 'Em Preparação' ? 'selected' : ''}>Em Preparação (PDI)</option>
-                                <option value="Entregue" ${item.statusProcesso === 'Entregue' ? 'selected' : ''}>✅ Entregue</option>
-                            </select>
-                        </td>
-                        <td><input type="date" value="${item.dataFaturamento || ''}" class="select-status" id="fat-${item.id}"></td>
-                        <td><input type="date" value="${item.previsaoEntrega || ''}" class="select-status" disabled style="background:#e2e8f0;" id="prev-${item.id}"></td>
-                        <td><input type="datetime-local" value="${item.dataAgendada || ''}" class="select-status" id="aged-${item.id}"></td>
-                        <td><input type="text" value="${item.obs || ''}" class="input-obs" id="obs-${item.id}" placeholder="Obs..."></td>
-                        <td><button class="btn" onclick="salvarAlteracao(${item.id})">Salvar</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+  let timerBusca;
+  $('busca').oninput = () => { clearTimeout(timerBusca); timerBusca = setTimeout(carregarPatio, 300); };
+  $('f-hoje').onclick = () => { filtros.dia = filtros.dia === 'hoje' ? '' : 'hoje'; carregarPatio(); };
+  $('f-limpar').onclick = () => { filtros = { localizacao: '', dia: '' }; $('busca').value = ''; carregarPatio(); };
 
-                document.getElementById('statPendente').innerText = counts.pendente;
-                document.getElementById('statAgendado').innerText = counts.agendado;
-                document.getElementById('statPreparacao').innerText = counts.preparacao;
-                document.getElementById('statEntregue').innerText = counts.entregue;
+  /* ---------- Scanner ---------- */
+  let scanner = null;
+  let lendo = false;
 
-            } catch (error) {
-                terminarSessao();
-            }
-        }
+  function extrairPlaca(texto) {
+    const m = String(texto).toUpperCase().match(/[A-Z]{3}-?\d[A-Z0-9]\d{2}/);
+    return m ? m[0].replace('-', '') : null;
+  }
 
-        async function salvarAlteracao(id) {
-            const token = localStorage.getItem('yardsync_token');
-            const localizacao = document.getElementById(`loc-${id}`).value;
-            const statusProcesso = document.getElementById(`status-${id}`).value;
-            const dataFaturamento = document.getElementById(`fat-${id}`).value;
-            const dataAgendada = document.getElementById(`aged-${id}`).value;
-            const obs = document.getElementById(`obs-${id}`).value;
+  async function abrirScanner() {
+    if (scanner) return fecharScanner();
+    if (typeof Html5Qrcode === 'undefined') return aviso('Não foi possível carregar o leitor de QR Code. Verifique a internet.', 'erro');
+    scanner = new Html5Qrcode('reader');
+    try {
+      await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } }, onLeitura, () => {});
+      $('btn-scan').textContent = 'Fechar câmera';
+    } catch (e) {
+      scanner = null;
+      aviso('Não foi possível abrir a câmera. Permita o acesso (e use HTTPS) ou digite a placa.', 'erro');
+    }
+  }
 
-            try {
-                const response = await fetch(`/api/agendamentos/${id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ localizacao, statusProcesso, dataFaturamento, dataAgendada, obs })
-                });
+  async function fecharScanner() {
+    if (!scanner) return;
+    const s = scanner;
+    scanner = null;
+    try { await s.stop(); s.clear(); } catch (e) { /* já estava parado */ }
+    $('btn-scan').textContent = 'Abrir câmera';
+  }
 
-                if (response.ok) {
-                    alert("Dados e cálculo de previsão atualizados com sucesso!");
-                    carregarDadosAPI();
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        }
+  async function onLeitura(texto) {
+    if (lendo) return;
+    const placa = extrairPlaca(texto);
+    if (!placa) return; // QR sem placa: continua tentando
+    lendo = true;
+    await fecharScanner();
+    await abrirFicha(placa);
+    lendo = false;
+  }
 
-        async function carregarConfigTi() {
-            const token = localStorage.getItem('yardsync_token');
-            try {
-                const res = await fetch('/api/ti/config', { headers: { 'Authorization': `Bearer ${token}` } });
-                const data = await res.json();
-                document.getElementById('inputDiasSLA').value = data.config.diasAposFaturamento;
+  $('btn-scan').onclick = abrirScanner;
+  $('btn-manual').onclick = () => {
+    const placa = extrairPlaca($('placa-manual').value);
+    if (!placa) return aviso('Placa inválida. Exemplos: ABC1234 ou ABC1D23.', 'erro');
+    abrirFicha(placa);
+  };
 
-                const tbody = document.getElementById('tabelaUtilizadores');
-                tbody.innerHTML = '';
-                data.users.forEach(u => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>#${u.id}</td>
-                        <td><strong>${u.user}</strong></td>
-                        <td>${u.role}</td>
-                        <td>${u.user !== 'admin' ? `<button class="btn btn-danger" onclick="removerUtilizador(${u.id})">Remover</button>` : 'Sistema'}</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (err) {}
-        }
+  /* ---------- Ficha do veículo ---------- */
+  const ehAdmin = () => usuario && ['administrador', 'ti'].includes(usuario.role);
 
-        async function salvarConfigSLA() {
-            const token = localStorage.getItem('yardsync_token');
-            const diasAposFaturamento = document.getElementById('inputDiasSLA').value;
-            const res = await fetch('/api/ti/config', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ diasAposFaturamento })
-            });
-            if (res.ok) alert("Regra de prazo (SLA) atualizada com sucesso!");
-        }
+  async function abrirFicha(placa) {
+    try {
+      const v = await api('/agendamentos/' + encodeURIComponent(placa));
+      placaAtual = v.placa;
+      $('f-titulo').textContent = fmtPlaca(v.placa);
+      $('f-dados').innerHTML =
+        `<dt>Cliente</dt><dd>${esc(v.cliente || '-')}</dd>
+         <dt>Chassi</dt><dd>${esc(v.chassi || '-')}</dd>
+         <dt>Faturamento</dt><dd>${esc(fmtData(v.dataFaturamento))}</dd>
+         <dt>Previsão de entrega</dt><dd>${esc(fmtData(v.previsaoEntrega))}</dd>
+         <dt>Entrega agendada</dt><dd>${esc(fmtDH(v.dataAgendada))}</dd>
+         <dt>Status</dt><dd>${esc(v.statusProcesso)}</dd>
+         <dt>Localização atual</dt><dd><span class="chip" data-loc="${esc(v.localizacao)}">${esc(v.localizacao)}</span></dd>
+         <dt>Observações</dt><dd>${esc(v.obs || '-')}</dd>`;
+      $('f-loc').value = v.localizacao;
+      $('f-admin').classList.toggle('hidden', !ehAdmin());
+      $('f-excluir').classList.toggle('hidden', usuario.role !== 'ti');
+      $('f-status').value = v.statusProcesso;
+      $('f-ag').value = v.dataAgendada ? v.dataAgendada.slice(0, 16).replace(' ', 'T') : '';
+      $('f-fat').value = v.dataFaturamento || '';
+      $('f-cliente').value = v.cliente || '';
+      $('f-chassi').value = v.chassi || '';
+      $('f-obs').value = v.obs || '';
+      $('f-hist').innerHTML = v.historico.length
+        ? v.historico.map((h) => `<li>${esc(new Date(h.criado_em).toLocaleString('pt-BR'))} · ${esc(h.de || '-')} para <b>${esc(h.para)}</b> · ${esc(h.usuario || '')}</li>`).join('')
+        : '<li>Nenhuma movimentação registrada.</li>';
+      if (!$('ficha').open) $('ficha').showModal();
+    } catch (e) { aviso(e.message, 'erro'); }
+  }
 
-        async function criarUtilizador() {
-            const token = localStorage.getItem('yardsync_token');
-            const newUser = document.getElementById('newUserInput').value;
-            const newPass = document.getElementById('newPassInput').value;
-            const newRole = document.getElementById('newRoleSelect').value;
+  $('f-fechar').onclick = () => $('ficha').close();
+  $('ficha').addEventListener('click', (e) => { if (e.target === $('ficha')) $('ficha').close(); });
 
-            const res = await fetch('/api/ti/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ newUser, newPass, newRole })
-            });
-            if (res.ok) {
-                alert("Novo acesso concedido com sucesso!");
-                document.getElementById('newUserInput').value = '';
-                document.getElementById('newPassInput').value = '';
-                carregarConfigTi();
-            }
-        }
+  $('f-salvar-loc').onclick = (ev) => acao(ev.currentTarget, async () => {
+    const d = await api('/veiculos/scan', { method: 'POST', body: { placa: placaAtual, novaLocalizacao: $('f-loc').value } });
+    aviso(d.mensagem, 'ok');
+    await abrirFicha(placaAtual);
+    carregarPatio();
+  });
 
-        async function removerUtilizador(id) {
-            if (!confirm("Deseja revogar o acesso deste utilizador?")) return;
-            const token = localStorage.getItem('yardsync_token');
-            const res = await fetch(`/api/ti/users/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) carregarConfigTi();
-        }
+  $('f-salvar').onclick = (ev) => acao(ev.currentTarget, async () => {
+    const d = await api('/agendamentos/' + encodeURIComponent(placaAtual), {
+      method: 'PUT',
+      body: {
+        statusProcesso: $('f-status').value, dataAgendada: $('f-ag').value, dataFaturamento: $('f-fat').value,
+        cliente: $('f-cliente').value, chassi: $('f-chassi').value, obs: $('f-obs').value,
+      },
+    });
+    aviso(d.mensagem, 'ok');
+    await abrirFicha(placaAtual);
+    carregarPatio();
+  });
 
-        function mudarAba(nomeAba, elementoBotao) {
-            document.querySelectorAll('.tab-content').forEach(aba => aba.classList.remove('active'));
-            document.querySelectorAll('.sidebar-menu button').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(nomeAba).classList.add('active');
-            elementoBotao.classList.add('active');
-        }
+  $('f-excluir').onclick = (ev) => acao(ev.currentTarget, async () => {
+    if (!confirm('Excluir o veículo ' + fmtPlaca(placaAtual) + '? Esta ação não pode ser desfeita.')) return;
+    const d = await api('/agendamentos/' + encodeURIComponent(placaAtual), { method: 'DELETE' });
+    aviso(d.mensagem, 'ok');
+    $('ficha').close();
+    carregarPatio();
+  });
 
-        let html5QrcodeScanner = null;
-        function iniciarScanner() {
-            document.getElementById('reader').style.display = 'block';
-            document.getElementById('btnScan').style.display = 'none';
-            document.getElementById('btnStop').style.display = 'inline-block';
+  /* ---------- Cadastro ---------- */
+  $('btn-novo').onclick = (ev) => acao(ev.currentTarget, async () => {
+    const d = await api('/agendamentos', {
+      method: 'POST',
+      body: { placa: $('n-placa').value, chassi: $('n-chassi').value, cliente: $('n-cliente').value, dataFaturamento: $('n-fat').value, localizacao: $('n-loc').value },
+    });
+    aviso(d.mensagem + ' Previsão: ' + fmtData(d.veiculo.previsaoEntrega), 'ok');
+    ['n-placa', 'n-chassi', 'n-cliente'].forEach((i) => ($(i).value = ''));
+  });
 
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    pararScanner();
-                    alert("QR Code lido com sucesso: " + decodedText);
-                },
-                (error) => {}
-            ).catch(err => pararScanner());
-        }
+  /* ---------- TI ---------- */
+  async function carregarTI() {
+    try {
+      const [cfg, users] = await Promise.all([api('/config'), api('/usuarios')]);
+      $('ti-sla').value = cfg.diasAposFaturamento;
+      $('ti-usuarios').innerHTML = users.map((u) =>
+        `<div class="usuario"><span><b>${esc(u.username)}</b> · ${esc(NOMES_PERFIL[u.role] || u.role)}</span>${u.username === usuario.username ? '' : `<button type="button" class="btn perigo" data-id="${u.id}" data-nome="${esc(u.username)}">Remover</button>`}</div>`
+      ).join('');
+      document.querySelectorAll('#ti-usuarios button').forEach((b) => (b.onclick = () => acao(b, async () => {
+        if (!confirm('Remover o usuário ' + b.dataset.nome + '? O acesso dele será revogado.')) return;
+        const d = await api('/usuarios/' + b.dataset.id, { method: 'DELETE' });
+        aviso(d.mensagem, 'ok');
+        carregarTI();
+      })));
+    } catch (e) { aviso(e.message, 'erro'); }
+  }
 
-        function pararScanner() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    document.getElementById('reader').style.display = 'none';
-                    document.getElementById('btnScan').style.display = 'inline-block';
-                    document.getElementById('btnStop').style.display = 'none';
-                });
-            }
-        }
-    </script>
+  $('btn-sla').onclick = (ev) => acao(ev.currentTarget, async () => {
+    const d = await api('/config', { method: 'PUT', body: { diasAposFaturamento: $('ti-sla').value } });
+    aviso(d.mensagem, 'ok');
+  });
+
+  $('btn-user').onclick = (ev) => acao(ev.currentTarget, async () => {
+    const d = await api('/usuarios', { method: 'POST', body: { username: $('u-nome').value, password: $('u-senha').value, role: $('u-role').value } });
+    aviso(d.mensagem, 'ok');
+    $('u-nome').value = ''; $('u-senha').value = '';
+    carregarTI();
+  });
+
+  $('btn-senha').onclick = (ev) => acao(ev.currentTarget, async () => {
+    const d = await api('/me/senha', { method: 'POST', body: { atual: $('s-atual').value, nova: $('s-nova').value } });
+    aviso(d.mensagem, 'ok');
+    $('s-atual').value = ''; $('s-nova').value = '';
+  });
+
+  iniciar();
+</script>
 </body>
 </html>

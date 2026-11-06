@@ -1,0 +1,66 @@
+# YardSync - Guia de Desenvolvimento e Contexto de Projeto
+
+YardSync é um sistema móvel e responsivo para gestão de pátio automotivo e rastreio de
+veículos em concessionárias. Liga a operação de campo (portaria/pátio) à gerência via web
+e integração VBA com Microsoft Excel.
+
+## Arquitetura
+- Monólito simples: Express serve o index.html (SPA) e a API REST no mesmo serviço.
+- Backend: Node.js (>=18) + Express 5. Banco: PostgreSQL via `pg` (DATABASE_URL).
+- Frontend: HTML/CSS/JS puro (sem build). Scanner: html5-qrcode 2.3.8 (CDN unpkg).
+- Auth: token assinado com HMAC-SHA256 (módulo crypto, sem biblioteca JWT), senhas com scrypt.
+
+## Estrutura de arquivos
+yardsync/
+├── server.js                  # API, regras de negócio, initDB() e autenticação
+├── index.html                 # Interface (login, pátio, scanner, cadastro, TI, conta)
+├── package.json
+├── .env.example               # variáveis de ambiente (copiar para .env)
+├── excel/YardSyncModulo.bas   # macro VBA de sincronização
+├── README.md                  # apresentação do produto
+└── CLAUDE.txt                 # este guia
+
+## Variáveis de ambiente
+- DATABASE_URL    (obrigatória) conexão PostgreSQL
+- AUTH_SECRET     (obrigatória em produção) segredo dos tokens
+- ADMIN_PASSWORD  senha do primeiro usuário "admin" (senão é gerada e mostrada no log)
+- EXCEL_API_KEY   chave somente leitura usada pela macro (rota /api/exportar.csv)
+- APP_TZ          fuso para "hoje"/"atrasados" (padrão America/Sao_Paulo)
+- NODE_ENV        "production" liga o redirecionamento HTTPS e desliga dados de exemplo
+- SEED_DEMO       "true" força dados de exemplo; "false" desliga fora de produção
+- PORT            padrão 3000
+
+## Regras de negócio
+1. SLA: previsão de entrega = data de faturamento + dias (tabela config, chave
+   dias_apos_faturamento, padrão 7). Alterar o SLA vale só para novos cadastros/edições
+   de faturamento. A previsão pode ser informada manualmente.
+2. Localização física: CD, Pátio Loja, Em Trânsito, Solicitado do CD.
+   (Solicitado do CD vem do README/index original; o texto antigo do contexto não listava.)
+3. Status comercial: Pendente de Agendamento, Cliente Contactado, Agendado, Em Preparação, Entregue.
+4. Perfis:
+   - operador: ver tudo e mudar localização (scanner).
+   - administrador: + cadastrar/editar veículos.
+   - ti: + SLA, usuários, excluir veículos.
+5. Placa é normalizada (maiúsculas, sem hífen): ABC1234 ou ABC1D23.
+6. Toda mudança de localização grava uma linha em movimentacoes.
+
+## Banco (criado por initDB())
+config, usuarios, agendamentos, movimentacoes.
+
+## Endpoints principais (todos exigem login, exceto /health e /api/login)
+POST /api/login | GET /api/me | POST /api/me/senha | GET /api/resumo
+GET/POST /api/agendamentos | GET/PUT/DELETE /api/agendamentos/:placa
+POST /api/veiculos/scan | GET /api/exportar.csv (login ou X-API-Key)
+GET/PUT /api/config | GET/POST /api/usuarios | DELETE /api/usuarios/:id
+
+## Cuidados
+- Nunca servir a pasta inteira com express.static: exporia server.js e .env.
+- Datas DATE/TIMESTAMP são lidas como texto para evitar deslocamento de fuso.
+- A câmera exige HTTPS (ou localhost).
+
+## Comandos
+npm install
+npm start
+git add . && git commit -m "feat: descrição" && git push origin main
+
+Mantenha este arquivo atualizado a cada grande modificação.
