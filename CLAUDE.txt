@@ -46,6 +46,9 @@ yardsync/
 
 ## Banco (criado por initDB())
 config, usuarios, agendamentos, movimentacoes.
+Se já existir tabela com o mesmo nome e estrutura diferente (versão antiga), ela é renomeada para
+<nome>_antiga_AAAAMMDD e os veículos são copiados para a nova. Usuários e config antigos não
+são migrados (senhas incompatíveis).
 
 ## Endpoints principais (todos exigem login, exceto /health e /api/login)
 POST /api/login | GET /api/me | POST /api/me/senha | GET /api/resumo
