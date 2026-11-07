@@ -156,7 +156,68 @@ function auth(...perfis) {
 /* ------------------------------------------------------------------ */
 /* Banco de dados                                                      */
 /* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/* Migração: tabelas de versões antigas                                */
+/* ------------------------------------------------------------------ */
+async function colunasDe(tabela) {
+  const r = await pool.query(
+    `SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1`,
+    [tabela]
+  );
+  return r.rows.map((x) => x.column_name);
+}
+
+// Se já existir uma tabela com o mesmo nome mas estrutura diferente (versão antiga do
+// projeto), ela é RENOMEADA para <nome>_antiga_AAAAMMDD. Nada é apagado.
+async function guardarTabelasAntigas() {
+  const exigidas = {
+    config: ['chave', 'valor'],
+    usuarios: ['id', 'username', 'password_hash', 'role', 'criado_em'],
+    agendamentos: ['id', 'placa', 'chassi', 'cliente', 'data_faturamento', 'previsao_entrega', 'data_agendada', 'localizacao', 'status_processo', 'obs', 'criado_em', 'atualizado_em'],
+  };
+  const sufixo = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  let agendamentosAntigos = null;
+  for (const [tabela, cols] of Object.entries(exigidas)) {
+    const atuais = await colunasDe(tabela);
+    if (!atuais.length || cols.every((c) => atuais.includes(c))) continue;
+    const novoNome = `${tabela}_antiga_${sufixo}`;
+    await pool.query(`ALTER TABLE ${tabela} RENAME TO ${novoNome}`);
+    console.warn(`AVISO: a tabela "${tabela}" era de uma versão antiga e foi renomeada para "${novoNome}".`);
+    if (tabela === 'agendamentos') agendamentosAntigos = { nome: novoNome, colunas: atuais };
+  }
+  return agendamentosAntigos;
+}
+
+// Copia os veículos da tabela antiga para a nova (só as colunas que existiam).
+async function copiarAgendamentosAntigos(antigos) {
+  try {
+    const expr = {
+      placa: `UPPER(REGEXP_REPLACE(placa, '[^A-Za-z0-9]', '', 'g'))`,
+      chassi: 'chassi',
+      cliente: 'cliente',
+      data_faturamento: `NULLIF(data_faturamento::text, '')::date`,
+      previsao_entrega: `NULLIF(previsao_entrega::text, '')::date`,
+      data_agendada: `NULLIF(data_agendada::text, '')::timestamp`,
+      localizacao: `COALESCE(localizacao, 'CD')`,
+      status_processo: `COALESCE(status_processo, 'Pendente de Agendamento')`,
+      obs: 'obs',
+    };
+    const campos = Object.keys(expr).filter((c) => antigos.colunas.includes(c));
+    if (!campos.includes('placa')) return;
+    const r = await pool.query(
+      `INSERT INTO agendamentos (${campos.join(', ')})
+       SELECT ${campos.map((c) => expr[c]).join(', ')} FROM ${antigos.nome}
+       WHERE REGEXP_REPLACE(COALESCE(placa, ''), '[^A-Za-z0-9]', '', 'g') <> ''
+       ON CONFLICT (placa) DO NOTHING`
+    );
+    console.log(`Migração: ${r.rowCount} veículo(s) copiado(s) de "${antigos.nome}".`);
+  } catch (e) {
+    console.warn(`AVISO: não foi possível copiar os veículos antigos (${e.message}). Eles continuam em "${antigos.nome}".`);
+  }
+}
+
 async function initDB() {
+  const agendamentosAntigos = await guardarTabelasAntigas();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS config (
       chave TEXT PRIMARY KEY,
@@ -193,6 +254,8 @@ async function initDB() {
     );
     CREATE INDEX IF NOT EXISTS idx_mov_placa ON movimentacoes (placa, criado_em DESC);
   `);
+
+  if (agendamentosAntigos) await copiarAgendamentosAntigos(agendamentosAntigos);
 
   await pool.query(
     `INSERT INTO config (chave, valor) VALUES ('dias_apos_faturamento', '7') ON CONFLICT (chave) DO NOTHING`
